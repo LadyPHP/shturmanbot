@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -21,16 +22,31 @@ func MainHandler(resp http.ResponseWriter, _ *http.Request) {
 	resp.Write([]byte("Bot is running."))
 }
 
-func setMsg() (string)  {
-	msg := "Я пока умею отвечать только это."
-	return msg
-}
-
-func getBusSchedule(from, to string) (link string) {
+func GetBusSchedule(from, to string) (link string) {
 	when := time.Now()
-	link = fmt.Sprintf("https://t.rasp.yandex.ru/search/bus/?fromName=%s&to=%s&when=%s", from, to, when)
+	link = fmt.Sprintf("https://t.rasp.yandex.ru/search/bus/?fromName=%s&toName=%s&when=%s", from, to, when)
 
 	return link
+}
+
+func GetBalance() (msg string, err error) {
+	api := "http://strelkacard.ru/api/cards/status/?cardnum=03330921822&cardtypeid=3ae427a1-0f17-4524-acb1-a3f50090a8f3"
+	resp, err := http.Get(api)
+	if err != nil {
+		return
+	}
+
+	resp.Body.Close()
+	res, _ := ioutil.ReadAll(resp.Body)
+	msg = fmt.Sprintf("%s", res)
+	return msg, nil
+}
+
+func setMsg() (string)  {
+	rasp := GetBusSchedule("Москва", "Звенигород")
+	balance, _ := GetBalance()
+	msg := fmt.Sprintf("Расписание %s . Баланс %s", rasp, balance)
+	return msg
 }
 
 func main() {
@@ -68,8 +84,8 @@ func main() {
 	// В канал updates будут приходить все новые сообщения.
 	for update := range updates {
 		// Создав структуру - можно её отправить обратно боту
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, getBusSchedule("Москва", "Звенигород"))
-		msg.ReplyToMessageID = update.Message.MessageID
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, setMsg())
+		//msg.ReplyToMessageID = update.Message.MessageID
 		bot.Send(msg)
 	}
 }
