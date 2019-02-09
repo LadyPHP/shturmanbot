@@ -5,12 +5,18 @@ import (
 	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
+	"net/http"
 	"os"
 )
 
 type Config struct {
 	TelegramBotToken string
 }
+
+func MainHandler(resp http.ResponseWriter, _ *http.Request) {
+	resp.Write([]byte("Hi there! I'm ShturmanBot!"))
+}
+
 
 func main() {
 	file, _ := os.Open("config.json")
@@ -45,6 +51,9 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	http.HandleFunc("/", MainHandler)
+	go http.ListenAndServe(":" + os.Getenv("PORT"), nil)
 
 	// В канал updates будут приходить все новые сообщения.
 	for update := range updates {
