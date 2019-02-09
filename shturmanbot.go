@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
 	"net/http"
@@ -11,12 +10,19 @@ import (
 
 type Config struct {
 	TelegramBotToken string
+	DebugMode bool
 }
 
+// метод возвращающий состоятие приложения
+// чтобы при прям запросе по https, приложение что-то возвращало, иначе на heroku падает
 func MainHandler(resp http.ResponseWriter, _ *http.Request) {
-	resp.Write([]byte("Hi there! I'm ShturmanBot!"))
+	resp.Write([]byte("Bot is running."))
 }
 
+func setMsg() (string)  {
+	msg := "Я пока умею отвечать только это."
+	return msg
+}
 
 func main() {
 	file, _ := os.Open("config.json")
@@ -26,21 +32,16 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
-	fmt.Println(configuration.TelegramBotToken)
-
+	
 	bot, err := tgbotapi.NewBotAPI(configuration.TelegramBotToken)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
+	bot.Debug = configuration.DebugMode
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	status, err := bot.GetMe()
-	fmt.Println(status)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -58,7 +59,7 @@ func main() {
 	// В канал updates будут приходить все новые сообщения.
 	for update := range updates {
 		// Создав структуру - можно её отправить обратно боту
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, setMsg())
 		msg.ReplyToMessageID = update.Message.MessageID
 		bot.Send(msg)
 	}
