@@ -31,10 +31,26 @@ func main() {
 
 	bot.Debug = true
 
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	status, err := bot.GetMe()
+	fmt.Println(status)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	//updates, err := bot.GetUpdatesChan(u)
+	updates := bot.ListenForWebhook("/" + bot.Token)
+
 	if err != nil {
 		log.Panic(err)
 	}
 
-	status_message, err := bot.GetMe()
-	fmt.Println(status_message)
+	// В канал updates будут приходить все новые сообщения.
+	for update := range updates {
+		// Создав структуру - можно её отправить обратно боту
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+		msg.ReplyToMessageID = update.Message.MessageID
+		bot.Send(msg)
+	}
 }
