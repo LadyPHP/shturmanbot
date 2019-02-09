@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -22,6 +24,13 @@ func MainHandler(resp http.ResponseWriter, _ *http.Request) {
 func setMsg() (string)  {
 	msg := "Я пока умею отвечать только это."
 	return msg
+}
+
+func getBusSchedule(from, to string) (link string) {
+	when := time.Now()
+	link = fmt.Sprintf("https://t.rasp.yandex.ru/search/bus/?fromName=%s&to=%s&when=%s", from, to, when)
+
+	return link
 }
 
 func main() {
@@ -59,7 +68,7 @@ func main() {
 	// В канал updates будут приходить все новые сообщения.
 	for update := range updates {
 		// Создав структуру - можно её отправить обратно боту
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, setMsg())
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, getBusSchedule("Москва", "Звенигород"))
 		msg.ReplyToMessageID = update.Message.MessageID
 		bot.Send(msg)
 	}
