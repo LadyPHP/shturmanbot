@@ -13,7 +13,7 @@ import (
 
 type Config struct {
 	TelegramBotToken string
-	DebugMode bool
+	DebugMode        bool
 }
 
 // метод возвращающий состоятие приложения
@@ -30,19 +30,36 @@ func GetBusSchedule(from, to string) (link string) {
 }
 
 func GetBalance() (msg string, err error) {
+	// TODO: убрать этот хардкод
 	api := "http://strelkacard.ru/api/cards/status/?cardnum=03330921822&cardtypeid=3ae427a1-0f17-4524-acb1-a3f50090a8f3"
-	resp, err := http.Get(api)
+
+	res, err := http.Get(api)
 	if err != nil {
-		return
+		log.Fatal(err)
+	}
+	response, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s", response)
+
+	var dat map[string]interface{}
+	if err := json.Unmarshal(response, &dat); err != nil {
+		panic(err)
 	}
 
-	resp.Body.Close()
-	res, _ := ioutil.ReadAll(resp.Body)
-	msg = fmt.Sprintf("%s", res)
+	num := dat["balance"].(float64) / 100
+	msg = fmt.Sprintf("Баланс в порядке %f", num)
+	if num < 200 {
+		msg = fmt.Sprintln("Пополнить баланс?")
+		// TODO: добавить команду пополнения баланса
+	}
+
 	return msg, nil
 }
 
-func setMsg() (string)  {
+func setMsg() string {
 	rasp := GetBusSchedule("Москва", "Звенигород")
 	balance, _ := GetBalance()
 	msg := fmt.Sprintf("Расписание %s . Баланс %s", rasp, balance)
@@ -57,7 +74,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	
+
 	bot, err := tgbotapi.NewBotAPI(configuration.TelegramBotToken)
 
 	if err != nil {
@@ -79,13 +96,12 @@ func main() {
 	}
 
 	http.HandleFunc("/", MainHandler)
-	go http.ListenAndServe(":" + os.Getenv("PORT"), nil)
+	go http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 
 	// В канал updates будут приходить все новые сообщения.
 	for update := range updates {
 		// Создав структуру - можно её отправить обратно боту
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, setMsg())
-		//msg.ReplyToMessageID = update.Message.MessageID
 		bot.Send(msg)
 	}
 }
